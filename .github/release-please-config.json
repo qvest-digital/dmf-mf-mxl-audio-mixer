@@ -1,0 +1,52 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "release-type": "simple",
+  "include-component-in-tag": true,
+  "include-v-in-tag": true,
+  "tag-separator": "-",
+  "versioning": "prerelease",
+  "prerelease-type": "rc",
+  "prerelease": true,
+  "initial-version": "1.0.0-rc.0",
+  "bootstrap-sha": "f575066b19ee5132f5836556c5c37bcd9f470959",
+  "packages": {
+    ".": {
+      "component": "dmf"
+    }
+  },
+  "changelog-sections": [
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Bug Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance Improvements"
+    },
+    {
+      "type": "deps",
+      "section": "Dependencies"
+    },
+    {
+      "type": "build",
+      "section": "Build System"
+    },
+    {
+      "type": "ci",
+      "section": "Continuous Integration"
+    },
+    {
+      "type": "chore",
+      "section": "Miscellaneous"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation",
+      "hidden": true
+    }
+  ]
+}
