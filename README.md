@@ -33,132 +33,201 @@ logic graphs; master/slave remote production.
 
 ## Web UI
 
-`http://<host>:8190/`: one page built into the binary (no CDN, no other files). Tabs
-(the URL hash addresses them): **Console** (strips in banks or in a view's banks:
-patch, trim, polarity, the chain overview with its response and gain reduction,
-sends, width and pan, PFL/AFL, mute and select, fader, meter, name; the buses and VCAs beside them, behind a
-divider that sets how wide each side is (drag it or use the arrow keys; double-click
-or Home: automatic), each side scrolling on its own. The name sits at the bottom of
-the strip (two lines, then … with the full name as its tooltip); a click on it
-renames it, the gear opens its processing, and its ⋮ menu (a dialog over the
-mixer) has "Processing…", "Format…" (the format change of the Processing view,
-confirmed by a second press), "Send to…" (a new send at 0 dB to a bus), on a bus
-"Add source…" and "Subgroup…", "Copy settings…" (every setting and the processing,
-not the name, input, format or sends, to another strip or bus of its kind or to the
-selected ones), on a strip "Auto-mix…" (join a gain-sharing auto-mix or none; "Add
-auto-mix…" opens the auto-mixes), "MIDI learn" (picks its fader), the meter scale
-("Meters"), "Auto…" (auto-level, ducking, voice detection), "Operations…" (group,
-N-1, link, mix-minus), "+ Strip…" or "+ Bus…" (several at once with numbered names;
-the first new one is selected) and "Delete…" (with a confirmation listing what goes
-with it). An empty console shows one empty strip and one empty bus with their menu.
-A click on a strip outside its controls selects it, Shift+click a range,
-Ctrl+click (⌘) one more: while several are selected they are linked: a fader, trim
-or width move, any processing parameter, moves the others by the same amount (each
-keeps its offset from the start of the move, also over the end of the travel; a
-frequency, Q, ratio or time by the same factor; an EQ band added or taken out only
-that band; −∞ counts as −80 dB), mute, PFL/AFL, a bypass or a choice is set the same on all, pan and the
-name stay on the strip (also the surround panner); the menu's actions and the Processing view's (add, move,
-delete a node) run on all selected. The selection is per browser. The strip's grip
-(the bar on top) moves it: drag it onto another strip or bus, or focus it and use
-the arrow keys; the order of strips and buses is the show's (every operator sees
-it), in a custom view the view's. The view and bank choice sit beside the tabs:
-"All strips", "Inputs" (only strips), "Buses" (only buses) and the show's custom
-views ("Edit views…": banks of strips, VCAs and buses in any order). A stereo or
-wider strip shows its first channel's source; a click opens every channel's source
-side by side. Its patch is linked by default: choose the first channel and the
-others follow in order on the same input (untick "Link" in that dialog to choose
-each). Besides the inputs and talkback mics the dialog lists every bus,
-every strip's direct out and every virtual output (1.6.0); an entry that would close
-a feedback loop is greyed out, and the server refuses one with the loop in the
-message. "Sel" beside Mute selects the strip as a click on it does. Wider strips have one
-polarity button that opens a toggle per channel and shows how many are inverted.
-The auto-mixes dialog shows every strip as a tile. A strip in an auto-mix carries
-the auto-mix's colour mark in its format row, and a click on its auto-mix meter
-takes it out of the sharing (grey, 0 dB) and back. A strip under VCAs shows a
-second, grey "VCA" cap on its fader where it is with them. The format, the gear and
-the ⋮ menu share the top row. A click
-on the fader value types a level (`0`, `-20`, `-inf`; Enter applies, Escape keeps
-it). The sends show their levels; a click opens Routing. A muted strip's meter still
-shows its level, grey. Strips of 8 or more channels are wider, with narrow meter
-bars. The pan right above PFL/AFL is L/R only, whatever the format (mono: pan;
-stereo and wider: the balance of the left and right channels). A strip whose
-post-pan sends feed a 5.1, 7.1, 5.1.4 or 7.1.4 bus has a "◎" surround button: it
-opens the surround panner, a top view of the layout with the source (drag on it:
-left/right, front/rear; height, spread, divergence and LFE beside it), for a wider
-strip one panner per channel; "Restore 1:1" removes it. A strip of two or more
-channels unfolds with the triangle left of its format: a fader, trim, mute and
-meter per channel under a bar that shows and switches whether they are linked
-(linked, the default: one moves all and keeps their offsets; unlinked: each keeps
-its own offset; "0" clears them). "MIDI" connects control surfaces, see
-[MIDI control](#midi-control)), **Processing**
-(the chain of a strip or bus as tiles of one size in a grid, in chain order: drag
-node types in from the palette, which stays in view, drag a tile by its header to
-reorder (the wheel scrolls meanwhile, Escape cancels), a click on the header opens
-or closes it, bypass, delete; ◀ ▶ or the `[` and `]` keys step to the previous or
-next strip or bus, its place ("2 of 12"), node count and latency under the select,
-"Format" beside its dropdown; the colour is one of 16 fixed ones; the fader is a
-tile of the flow (dashed while it follows the chain): units after it run
-post-fader, a click on a palette unit puts it before the fader; the **Flow** group
-of the palette has the fader, direct outs, inserts and the automixer (an automixed
-signal without one shows it dashed before the fader, drag it to place it); EQ curve with band handles (a double-click resets a band;
-high- and low-pass bands with their slope), one band's controls at a time, filter,
-dynamics transfer curves with the live level, de-esser listen, keys, the surround
-panner's position pad (spread: a bubble around the dot grows and drifts to the centre; the dot keeps its position and height); every
-band's gain reduction of a multiband or dynamic EQ; copy and paste of units (a
-unit's ⧉ puts it on the browser's clipboard; the clipboard bar pastes all or one,
-a unit's ⇩ takes the copied unit of its type); the signal flow below the chain
-(drag nodes to reorder, drag sends, a bus out and keys to another tap; direct outs
-and inserts are nodes there);
-the signal's format, changed after a confirming second
-press, with the nodes it would bypass named first and a flag on every node that
-cannot run on the format; a bus's own down-mix), **Routing** (the send matrix,
-sources in rows, destination buses in columns: a click on an empty cell marks it
-yellow, a second click on it within 3 s sends at 0 dB; a send's tap (only those
-its source has), gain, mute, phase and block delay; a send from a mono or stereo
-source into a 5.1 or bigger bus has a surround panner of its own; the virtual
-outputs with a source list each; publishing outputs, a strip as its direct out,
-and copying a flow id), **Graph**
-(the routing as a graph, read-write: inputs (alias and what is connected),
+`http://<host>:8190/`: one page built into the binary (no CDN, no other files).
+The URL hash addresses its tabs. Every client follows every change. Faders and
+pots take touch: drag, − and + (held: repeated), double-click resets;
+destructive actions want a second press within 3 s. The theme follows the
+system or is set light or dark (kept in the browser).
+
+### Console
+
+Strips in banks or in a view's banks: patch, trim, polarity, the chain overview
+with its response and gain reduction, sends, width and pan, PFL/AFL, mute and
+select, fader, meter, name. The buses and VCAs sit beside them, behind a divider
+that sets how wide each side is (drag it or use the arrow keys; double-click or
+Home: automatic), each side scrolling on its own.
+
+**Strip.** The format, the gear and the ⋮ menu share the top row. The name sits
+at the bottom of the strip (two lines, then … with the full name as its
+tooltip); a click on it renames it, the gear opens its processing. "Sel" beside
+Mute selects the strip as a click on it does.
+
+- A click on the fader value types a level (`0`, `-20`, `-inf`; Enter applies,
+  Escape keeps it).
+- The sends show their levels; a click opens Routing.
+- A muted strip's meter still shows its level, grey.
+- Strips of 8 or more channels are wider, with narrow meter bars.
+- Wider strips have one polarity button that opens a toggle per channel and
+  shows how many are inverted.
+- The pan right above PFL/AFL is L/R only, whatever the format (mono: pan;
+  stereo and wider: the balance of the left and right channels).
+- A strip whose post-pan sends feed a 5.1, 7.1, 5.1.4 or 7.1.4 bus has a "◎"
+  surround button: it opens the surround panner, a top view of the layout with
+  the source (drag on it: left/right, front/rear; height, spread, divergence and
+  LFE beside it), for a wider strip one panner per channel; "Restore 1:1"
+  removes it.
+- A strip of two or more channels unfolds with the triangle left of its format:
+  a fader, trim, mute and meter per channel under a bar that shows and switches
+  whether they are linked (linked, the default: one moves all and keeps their
+  offsets; unlinked: each keeps its own offset; "0" clears them).
+- A strip in an auto-mix carries the auto-mix's colour mark in its format row,
+  and a click on its auto-mix meter takes it out of the sharing (grey, 0 dB) and
+  back. The auto-mixes dialog shows every strip as a tile.
+- A strip under VCAs shows a second, grey "VCA" cap on its fader where it is
+  with them.
+
+**Menu.** The ⋮ menu (a dialog over the mixer) has:
+
+- "Processing…"
+- "Format…" (the format change of the Processing view, confirmed by a second
+  press)
+- "Send to…" (a new send at 0 dB to a bus)
+- on a bus, "Add source…" and "Subgroup…"
+- "Copy settings…" (every setting and the processing, not the name, input,
+  format or sends, to another strip or bus of its kind or to the selected ones)
+- on a strip, "Auto-mix…" (join a gain-sharing auto-mix or none; "Add
+  auto-mix…" opens the auto-mixes)
+- "MIDI learn" (picks its fader)
+- the meter scale ("Meters")
+- "Auto…" (auto-level, ducking, voice detection)
+- "Operations…" (group, N-1, link, mix-minus)
+- "+ Strip…" or "+ Bus…" (several at once with numbered names; the first new
+  one is selected)
+- "Delete…" (with a confirmation listing what goes with it)
+
+An empty console shows one empty strip and one empty bus with their menu.
+
+**Selection.** A click on a strip outside its controls selects it, Shift+click a
+range, Ctrl+click (⌘) one more. While several are selected they are linked:
+
+- a fader, trim or width move, any processing parameter, moves the others by the
+  same amount (each keeps its offset from the start of the move, also over the
+  end of the travel; a frequency, Q, ratio or time by the same factor; an EQ band
+  added or taken out only that band; −∞ counts as −80 dB);
+- mute, PFL/AFL, a bypass or a choice is set the same on all;
+- pan and the name stay on the strip (also the surround panner);
+- the menu's actions and the Processing view's (add, move, delete a node) run on
+  all selected.
+
+The selection is per browser.
+
+**Order and views.** The strip's grip (the bar on top) moves it: drag it onto
+another strip or bus, or focus it and use the arrow keys; the order of strips
+and buses is the show's (every operator sees it), in a custom view the view's.
+The view and bank choice sit beside the tabs: "All strips", "Inputs" (only
+strips), "Buses" (only buses) and the show's custom views ("Edit views…": banks
+of strips, VCAs and buses in any order).
+
+**Patch.** A stereo or wider strip shows its first channel's source; a click
+opens every channel's source side by side. Its patch is linked by default:
+choose the first channel and the others follow in order on the same input
+(untick "Link" in that dialog to choose each). Besides the inputs and talkback
+mics the dialog lists every bus, every strip's direct out and every virtual
+output (1.6.0); an entry that would close a feedback loop is greyed out, and the
+server refuses one with the loop in the message.
+
+"MIDI" connects control surfaces, see [MIDI control](#midi-control).
+
+### Processing
+
+The chain of a strip or bus as tiles of one size in a grid, in chain order.
+
+- Drag node types in from the palette, which stays in view; drag a tile by its
+  header to reorder (the wheel scrolls meanwhile, Escape cancels); a click on the
+  header opens or closes it; bypass, delete.
+- ◀ ▶ or the `[` and `]` keys step to the previous or next strip or bus; its
+  place ("2 of 12"), node count and latency under the select, "Format" beside
+  its dropdown; the colour is one of 16 fixed ones.
+- The fader is a tile of the flow (dashed while it follows the chain): units
+  after it run post-fader, a click on a palette unit puts it before the fader.
+  The **Flow** group of the palette has the fader, direct outs, inserts and the
+  automixer (an automixed signal without one shows it dashed before the fader,
+  drag it to place it).
+- EQ curve with band handles (a double-click resets a band; high- and low-pass
+  bands with their slope), one band's controls at a time, filter, dynamics
+  transfer curves with the live level, de-esser listen, keys, the surround
+  panner's position pad (spread: a bubble around the dot grows and drifts to the
+  centre; the dot keeps its position and height); every band's gain reduction of
+  a multiband or dynamic EQ.
+- Copy and paste of units (a unit's ⧉ puts it on the browser's clipboard; the
+  clipboard bar pastes all or one, a unit's ⇩ takes the copied unit of its
+  type).
+- The signal flow below the chain (drag nodes to reorder, drag sends, a bus out
+  and keys to another tap; direct outs and inserts are nodes there).
+- The signal's format, changed after a confirming second press, with the nodes
+  it would bypass named first and a flag on every node that cannot run on the
+  format; a bus's own down-mix.
+
+### Routing
+
+The send matrix, sources in rows, destination buses in columns: a click on an
+empty cell marks it yellow, a second click on it within 3 s sends at 0 dB.
+
+- A send's tap (only those its source has), gain, mute, phase and block delay.
+- A send from a mono or stereo source into a 5.1 or bigger bus has a surround
+  panner of its own.
+- The virtual outputs with a source list each.
+- Publishing outputs, a strip as its direct out, and copying a flow id.
+
+### Graph
+
+The routing as a graph, read-write: inputs (alias and what is connected),
 strips, buses, monitors and outputs (virtual and published, the same way) with
-their patches, sends, mix-minus, monitor sources and output sources; draw from a
-strip or bus to a bus to send, click a send to edit it (its tap list offers only
-the taps its source has; from a mono or stereo source into 5.1 or wider its own
-surround pan (`pan`), else a mono or stereo strip's pan, from a wider
-source into a narrower bus that bus's down-mix), Delete removes it; draw from a
-strip, bus, monitor or input into a virtual output to feed it (Delete on the
-wire: silence); click an input to give it an alias and choose its MXL flow;
-double-click a strip or bus for its processing, a monitor for the control room;
-nodes in columns by routing depth, moved ones kept in the browser; zoom, pan and
-the open panel stay over a tab switch), **Logic** (logic
-graphs, §11: drag blocks in from the palette or click them; draw cables between
-ports, coloured by type (boolean, number, level, event, text), where an input that
-cannot take the cable is dimmed while drawing; zoom, pan and a minimap; select
-several blocks (Ctrl-click, Shift-drag), copy and paste them with their cables
-(Ctrl+C, Ctrl+V, also into another graph), "Copy logic to" a new graph (dry run) or
-into another graph, Delete; undo and redo (Ctrl+Z,
-Ctrl+Shift+Z) of every edit; group blocks into a macro with the ports you choose,
-open it (double-click, a breadcrumb back) and ungroup it; a refused edit shows the
-server's reasons as red markers on the blocks, ports and the dashed cable; every
-block shows its live value; soft keys, triggers, dry run and the list of the last
-actions; the list under the canvas edits every parameter (a fader position's
-threshold in the "High at" column, left of Value), and a click on a block's
-row selects it in the graph. A new graph starts in
-dry run, and the toolbar shows LIVE, DRY RUN or OFF; undo never changes that. A
-new block gets no target by itself (amber until one is chosen: an action without
-one never acts, an input without one reads off, 0 or the floor; a webhook without
-a URL, a `tsl-out` without an index too; two `tsl-out` blocks of the show on one
-index are marked amber, as they would write one display). In a live graph,
-paste, group, ungroup, undo and redo ask first when they make actions or blocks
-that remember: those actions act at once, and re-made blocks start empty),
-**Snapshots** (take, recall with filters, recall-safe, crossfade; layouts; show
-history), **Meters** (the bridge on dBFS, true peak or PPM EBU, BBC, Nordic, DIN at
-an alignment level, phase correlation; loudness; spectrum and goniometer of any
-tap), **NMOS**, **Status**, **Settings** (mix settings with the down-mix, applied
-with a button; configuration, show export and import). Every client follows every
-change. Faders and pots take touch: drag,
-− and + (held: repeated), double-click resets; destructive actions want a second
-press within 3 s. The theme follows the system or is set light or dark (kept in
-the browser).
+their patches, sends, mix-minus, monitor sources and output sources.
+
+- Draw from a strip or bus to a bus to send; click a send to edit it (its tap
+  list offers only the taps its source has; from a mono or stereo source into
+  5.1 or wider its own surround pan (`pan`), else a mono or stereo strip's pan,
+  from a wider source into a narrower bus that bus's down-mix); Delete removes
+  it.
+- Draw from a strip, bus, monitor or input into a virtual output to feed it
+  (Delete on the wire: silence).
+- Click an input to give it an alias and choose its MXL flow.
+- Double-click a strip or bus for its processing, a monitor for the control
+  room.
+- Nodes in columns by routing depth, moved ones kept in the browser; zoom, pan
+  and the open panel stay over a tab switch.
+
+### Logic
+
+Logic graphs, §11.
+
+- Drag blocks in from the palette or click them; draw cables between ports,
+  coloured by type (boolean, number, level, event, text), where an input that
+  cannot take the cable is dimmed while drawing; zoom, pan and a minimap.
+- Select several blocks (Ctrl-click, Shift-drag), copy and paste them with their
+  cables (Ctrl+C, Ctrl+V, also into another graph), "Copy logic to" a new graph
+  (dry run) or into another graph, Delete; undo and redo (Ctrl+Z, Ctrl+Shift+Z)
+  of every edit.
+- Group blocks into a macro with the ports you choose, open it (double-click, a
+  breadcrumb back) and ungroup it.
+- A refused edit shows the server's reasons as red markers on the blocks, ports
+  and the dashed cable.
+- Every block shows its live value; soft keys, triggers, dry run and the list of
+  the last actions.
+- The list under the canvas edits every parameter (a fader position's threshold
+  in the "High at" column, left of Value), and a click on a block's row selects
+  it in the graph.
+
+A new graph starts in dry run, and the toolbar shows LIVE, DRY RUN or OFF; undo
+never changes that. A new block gets no target by itself (amber until one is
+chosen: an action without one never acts, an input without one reads off, 0 or
+the floor; a webhook without a URL, a `tsl-out` without an index too; two
+`tsl-out` blocks of the show on one index are marked amber, as they would write
+one display). In a live graph, paste, group, ungroup, undo and redo ask first
+when they make actions or blocks that remember: those actions act at once, and
+re-made blocks start empty.
+
+### Snapshots, Meters, NMOS, Status, Settings
+
+- **Snapshots**: take, recall with filters, recall-safe, crossfade; layouts;
+  show history.
+- **Meters**: the bridge on dBFS, true peak or PPM EBU, BBC, Nordic, DIN at an
+  alignment level, phase correlation; loudness; spectrum and goniometer of any
+  tap.
+- **NMOS**, **Status**.
+- **Settings**: mix settings with the down-mix, applied with a button;
+  configuration, show export and import.
 
 `scripts/demo.sh` starts a tone flow, the mixer and a small show to try it.
 
