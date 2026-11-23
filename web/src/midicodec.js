@@ -5,7 +5,8 @@ import { FADER_MAX_DB, dbToPos, posToDb } from "./dsp.js";
 
 // ---- Mackie Control ------------------------------------------------------------------
 // The Logic Control / Mackie Control protocol: faders are pitch bend on channels 1–8 (master on 9), the
-// buttons notes (press: velocity 127, release: 0), the V-pots relative CCs, the LEDs the same notes back.
+// buttons notes (press: velocity 127, release: 0), the V-pots relative CCs, the LEDs the same notes back,
+// the meters channel pressure.
 export const MCU = {
   STRIPS: 8,
   SOLO: 0x08,
@@ -39,6 +40,19 @@ export function panRing(pan) {
   return 0x10 | (1 + Math.round(((Math.max(-1, Math.min(1, pan)) + 1) / 2) * 10));
 }
 
+// The meter LEDs: channel pressure, the strip in the high nibble and the level in the low one: 0…12 the
+// meter, 14 the overload on, 15 off. An X-Touch (7 LEDs and clip) lights one LED per two levels (1, 3, 5,
+// 7, 9, 11 and 12) and its clip LED at 14 and 15, and lets either fall by itself, so a level is sent again
+// while the signal lasts.
+const LED_LEVELS = [0, 1, 3, 5, 7, 9, 11, 12]; // the level lighting 0…7 LEDs
+/** A meter's height (0…1 of its scale, as the console draws it) as a level lighting as many of 7 LEDs;
+ * 14 (clip) when `over`. */
+export const meterLevel = (fraction, over = false) => (over ? 14 : LED_LEVELS[Math.max(0, Math.min(7, Math.floor(fraction * 7)))]);
+/** The meter message of a strip (0–7) for a height 0…1, in the red zone or not. */
+export const meter = (strip, fraction, over = false) => [0xd0, (strip << 4) | meterLevel(fraction, over)];
+/** The overload of a strip (0–7) on or off. */
+export const meterClip = (strip, on) => [0xd0, (strip << 4) | (on ? 0x0e : 0x0f)];
+
 /** The 2 × 56 character LCD: SysEx writing `text` at `offset` (0–55 top row, 56–111 bottom row). */
 export function lcd(text, offset, xt = false) {
   const chars = [...String(text)].map((ch) => {
@@ -47,6 +61,21 @@ export function lcd(text, offset, xt = false) {
   });
   return [0xf0, 0x00, 0x00, 0x66, xt ? 0x15 : 0x14, 0x12, offset, ...chars, 0xf7];
 }
+
+// The display colours of an X-Touch (not in the Mackie Control protocol): one SysEx with a byte per strip,
+// bit 0 red, bit 1 green, bit 2 blue; 7 is white, the colour without one set.
+/** A strip colour (#rrggbb) as the nearest display colour: each component at half its largest or more is
+ * on; white for none or black. */
+export function lcdColour(hex) {
+  const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex || "");
+  if (!m) return 7;
+  const [r, g, b] = m.slice(1).map((x) => parseInt(x, 16));
+  const top = Math.max(r, g, b);
+  if (!top) return 7;
+  return (r * 2 >= top ? 1 : 0) | (g * 2 >= top ? 2 : 0) | (b * 2 >= top ? 4 : 0);
+}
+/** The display colours of 8 strips (0–7 each). */
+export const lcdColours = (codes, xt = false) => [0xf0, 0x00, 0x00, 0x66, xt ? 0x15 : 0x14, 0x72, ...codes, 0xf7];
 
 /** A strip's 7 LCD characters: the text cut or padded to 6, then a space. */
 export const lcdCell = (text) => `${String(text).slice(0, 6).padEnd(6)} `;

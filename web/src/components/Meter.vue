@@ -4,7 +4,7 @@
 // Above 3 channels the bars are narrower and the channel labels (L R C LFE …) stand below them (A9). A
 // muted signal's level shows grey (A3).
 import { computed } from "vue";
-import { SCALES, scaleFraction, scaleLevel } from "../dsp.js";
+import { SCALES, scaleFraction, scaleLevel, scaleOver } from "../dsp.js";
 import { api, dbValue, fmtDb } from "../api.js";
 import { act } from "../store.js";
 
@@ -37,11 +37,9 @@ const maxHold = computed(() => Math.max(...chans.value.map(hold)));
 // Colour zones: the top 6 dB of the digital scales, above the permitted maximum (alignment + 9) on PPMs.
 const zone = (c) => {
   const lvl = level(c);
-  if (s.value.rel) {
-    const over = lvl + (s.value.offset || 0) - 9;
-    return over > 0 ? "bad" : over > -9 ? "warn" : "ok";
-  }
-  return lvl > -1 ? "bad" : lvl > -9 ? "warn" : "ok";
+  if (scaleOver(props.scale, lvl)) return "bad";
+  if (s.value.rel) return lvl + (s.value.offset || 0) - 9 > -9 ? "warn" : "ok";
+  return lvl > -9 ? "warn" : "ok";
 };
 const markPos = (d) => `${scaleFraction(props.scale, d) * 100}%`;
 function clear() {

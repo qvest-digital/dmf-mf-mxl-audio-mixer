@@ -3,14 +3,17 @@
 // Each input port has a mode, remembered in this browser by its name:
 // - Mackie Control (MCU): 8 strips from the bank (the console's strips, then its buses), motor faders, mute,
 //   solo (PFL), select, V-pot = pan, bank and channel buttons, the master fader on a chosen bus, names and
-//   levels on the display. An extender (MCU XT) takes the next 8 strips.
+//   levels on the display, each strip's meter on its LEDs as the console draws it, the clip LED in the red zone; on an X-Touch each
+//   strip's colour on its display. An extender (MCU XT) takes the next 8 strips.
 // - Generic (learn): a control learnt on a fader, mute, PFL, AFL or pan of a strip or bus; the mappings are
 //   kept in this browser and can be exported and imported as JSON.
 // Feedback (motor faders, LEDs, V-pot rings) goes to the output port paired with the input (by default the
 // one of the same name). Web MIDI needs a secure page (https or localhost).
 import { reactive, watch } from "vue";
 import { dbValue } from "./api.js";
-import { MCU, bendToDb, checkMappings, controlKey, controlText, controlValue, dbToBend, feedback, lcd, lcdCell, lcdDb, panRing, parseControl, parseMcu, LEARN_PARAMS } from "./midicodec.js";
+import { consoleUi } from "./consoleui.js";
+import { SCALES, scaleFraction, scaleLevel, scaleOver } from "./dsp.js";
+import { MCU, bendToDb, checkMappings, controlKey, controlText, controlValue, dbToBend, feedback, lcd, lcdCell, lcdColours, lcdColour, lcdDb, meter, meterClip, panRing, parseControl, parseMcu, LEARN_PARAMS } from "./midicodec.js";
 import { buses, live, patchSignal, select, signalOf, soloed, store, stored, strips, toggleSolo } from "./store.js";
 
 function load(key, fallback) {
@@ -216,6 +219,7 @@ function refreshMcu(name, force) {
   const list = surface();
   const top = [];
   const bottom = [];
+  const colours = [];
   for (let i = 0; i < MCU.STRIPS; i++) {
     const s = list[off + i] || null;
     const db = s ? dbValue(s.fader_db) : -Infinity;
@@ -229,13 +233,43 @@ function refreshMcu(name, force) {
     if (!held(`${name}|ring${i}`)) send(port, `ring${i}`, [0xb0, MCU.RING + i, hasPan(s) ? panRing(s.pan) : 0], force);
     top.push(lcdCell(s ? s.name : ""));
     bottom.push(lcdCell(s ? lcdDb(db) : ""));
+    colours.push(lcdColour(s?.colour));
   }
+  send(port, "lcd-colour", lcdColours(colours, mode === "mcu-xt"), force);
   send(port, "lcd-top", lcd(top.join(""), 0, mode === "mcu-xt"), force);
   send(port, "lcd-bottom", lcd(bottom.join(""), 56, mode === "mcu-xt"), force);
   if (mode === "mcu" && !touched.has(`${name}|${MCU.MASTER}`) && !held(`${name}|fader${MCU.MASTER}`)) {
     const b = masterBus();
     const v = b ? dbToBend(dbValue(b.fader_db)) : 0;
     send(port, "master", [0xe0 | MCU.MASTER, v & 0x7f, v >> 7], force);
+  }
+}
+
+/** A signal's meter as the console draws it: the highest bar (0…1) on the console's scale, and whether a
+ * bar is in the red zone. */
+function reading(s) {
+  const v = live.meters[s?.id];
+  if (!v) return { fraction: 0, red: false };
+  const scale = SCALES[consoleUi.scale] ? consoleUi.scale : "dbfs";
+  const alignment = Number(stored("meter.alignment", -18));
+  const levels = (v.peak_dbfs || []).map((_, c) => scaleLevel(scale, v, c, alignment));
+  return { fraction: Math.max(0, ...levels.map((l) => scaleFraction(scale, l))), red: levels.some((l) => scaleOver(scale, l)) };
+}
+
+/** The meter LEDs of a Mackie device's 8 strips, on every meter reading. */
+function metersMcu(name) {
+  const port = output(name);
+  if (!port) return;
+  const off = offsetOf(name);
+  const list = surface();
+  for (let i = 0; i < MCU.STRIPS; i++) {
+    const { fraction, red } = reading(list[off + i]);
+    // The overload is set on entering the red zone and cleared on leaving it, before the level, so a device
+    // that takes 15 as a level (an X-Touch) shows the level after it.
+    send(port, `clip${i}`, meterClip(i, red));
+    const data = meter(i, fraction, red);
+    // A level goes out on every reading, as the device lets it fall; silence once.
+    send(port, `meter${i}`, data, (data[1] & 0x0f) > 0);
   }
 }
 
@@ -365,6 +399,13 @@ export function refresh(force = false) {
 }
 
 watch(() => [live.mix, live.status?.solo, live.selected, midi.bank, midi.master, midi.mappings], () => refresh(), { flush: "post" });
+watch(
+  () => live.meters,
+  () => {
+    if (!access) return;
+    for (const { name } of midi.inputs) if (["mcu", "mcu-xt"].includes(deviceOf(name).mode)) metersMcu(name);
+  },
+);
 watch(
   () => midi.master,
   (v) => store("midi.master", v),

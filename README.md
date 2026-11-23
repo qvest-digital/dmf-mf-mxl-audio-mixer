@@ -274,7 +274,12 @@ for the feedback (by default the port of the same name):
   touched fader is not moved), mute, solo (PFL), select, the V-pot pans (2 % per
   tick; push: centre) and its ring shows the pan, bank and channel buttons move the
   bank (also in the dialog), the master fader runs a chosen bus (default the first),
-  the display shows names and levels. **Mackie Control extender**: the next 8 strips.
+  the display shows names and levels, the meter LEDs each strip's meter as the
+  console draws it (its scale and alignment, the bar's height in 7 steps, the
+  levels an X-Touch lights its 7 LEDs at) and the clip LED the red zone (the
+  overload, level 14); an X-Touch shows each strip's colour on its display, the
+  nearest of its 7 (white without one).
+  **Mackie Control extender**: the next 8 strips.
 - **Generic (MIDI learn)**: "Learn…", then click a fader, mute, PFL, AFL or pan on
   the console (it is picked, not changed) and move a control (CC, note or pitch
   bend) on the device. A button toggles on its press (tick "latching" in the list

@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { chromium } from "playwright-core";
 import { parseFaderDb } from "../src/console.js";
-import { bendToDb, checkMappings, controlValue, dbToBend, exportMappings, feedback, importMappings, lcd, panRing, parseControl, parseMcu, vpotTicks } from "../src/midicodec.js";
+import { bendToDb, checkMappings, controlValue, dbToBend, exportMappings, feedback, importMappings, lcd, lcdColour, lcdColours, meter, meterClip, meterLevel, panRing, parseControl, parseMcu, vpotTicks } from "../src/midicodec.js";
 
 const pass = (what) => console.log(`[midi.mjs] PASS: ${what}`);
 
@@ -32,6 +32,25 @@ assert.deepEqual(parseMcu([0x90, 0x69, 0x7f]), { kind: "touch", strip: 1, on: tr
 assert.deepEqual(parseMcu([0xb0, 0x17, 0x42]), { kind: "vpot", strip: 7, ticks: -2 });
 assert.deepEqual(parseMcu([0x90, 0x2f, 0x7f]), { kind: "bank", dir: 1 });
 assert.equal(parseMcu([0x90, 0x2f, 0x00]), null);
+assert.equal(meterLevel(0), 0);
+assert.equal(meterLevel(0.14), 0);
+assert.equal(meterLevel(1 / 7), 1);
+assert.equal(meterLevel(0.5), 5);
+assert.equal(meterLevel(0.99), 11);
+assert.equal(meterLevel(1), 12);
+assert.equal(meterLevel(0.5, true), 14);
+assert.deepEqual(meter(3, 0.75), [0xd0, 0x39]);
+assert.deepEqual(meter(3, 0.99, true), [0xd0, 0x3e]);
+assert.deepEqual(meterClip(2, true), [0xd0, 0x2e]);
+assert.deepEqual(meterClip(2, false), [0xd0, 0x2f]);
+assert.equal(lcdColour("#4da3ff"), 6);
+assert.equal(lcdColour("#e08a3a"), 3);
+assert.equal(lcdColour("#ff0000"), 1);
+assert.equal(lcdColour("#202020"), 7);
+assert.equal(lcdColour("#000000"), 7);
+assert.equal(lcdColour(""), 7);
+assert.equal(lcdColour(undefined), 7);
+assert.deepEqual(lcdColours([1, 2, 3, 4, 5, 6, 7, 7], true), [0xf0, 0, 0, 0x66, 0x15, 0x72, 1, 2, 3, 4, 5, 6, 7, 7, 0xf7]);
 assert.deepEqual(lcd("Vox", 7), [0xf0, 0, 0, 0x66, 0x14, 0x12, 7, 86, 111, 120, 0xf7]);
 const cc = parseControl([0xb1, 7, 127]);
 assert.deepEqual(cc.control, { type: "cc", channel: 1, number: 7 });
@@ -153,7 +172,9 @@ try {
   const vox = await api("/api/v1/strips/vox");
   await hasSent("X-Touch", [0xe0, dbToBend(vox.fader_db) & 0x7f, dbToBend(vox.fader_db) >> 7]);
   await until("the display shows the names", async () => (await sentTo("X-Touch")).some((d) => d[0] === 0xf0 && String.fromCharCode(...d.slice(7, -1)).startsWith(surface.slice(0, 8).map((x) => `${x.name.slice(0, 6).padEnd(6)} `).join(""))));
-  pass("Mackie Control: motor faders and the names on the display at once");
+  // The display colours: each strip's nearest (vox's #4da3ff cyan), white past the end of the surface.
+  await hasSent("X-Touch", [0xf0, 0, 0, 0x66, 0x14, 0x72, ...surface.slice(0, 8).map((x) => lcdColour(x.colour)), ...Array(Math.max(0, 8 - surface.length)).fill(7), 0xf7]);
+  pass("Mackie Control: motor faders and the names on the display at once, the display colours");
   const b10 = dbToBend(-10);
   await push("X-Touch", [0xe0, b10 & 0x7f, b10 >> 7]);
   await until("vox at −10 dB from the Mackie fader", async () => (await api("/api/v1/strips/vox")).fader_db === -10);
@@ -186,6 +207,17 @@ try {
   await push("X-Touch", [0x90, 0x68, 0x00]);
   await hasSent("X-Touch", [0xe0, dbToBend(-20) & 0x7f, dbToBend(-20) >> 7]);
   pass("Mackie Control: fader, mute, V-pot pan and push, solo (PFL), select, master; LEDs, ring and motor fader follow, not while touched");
+
+  // The meters: vox (strip 1) carries the tone, so its meter lights LEDs and is sent again with every
+  // reading, as the device lets it fall; its overload is cleared, as it stays out of the red zone;
+  // a strip past the end of the surface stays dark.
+  const voxMeter = () => sentTo("X-Touch").then((l) => l.filter((d) => d[0] === 0xd0 && d[1] >> 4 === 0 && (d[1] & 0x0f) <= 12));
+  await until("vox's meter lit", async () => (await voxMeter()).some((d) => (d[1] & 0x0f) > 0));
+  const lit = (await voxMeter()).length;
+  await until("vox's meter sent again", async () => (await voxMeter()).length >= lit + 3);
+  await hasSent("X-Touch", [0xd0, 0x0f]);
+  if (surface.length < 8) await hasSent("X-Touch", [0xd0, 0x70]);
+  pass("Mackie Control: meter LEDs as the console draws them, refreshed with every reading; overload cleared outside the red zone");
 
   // Generic MIDI learn: CC 7 on vox's fader, note 36 on gtr's mute.
   await page.getByRole("button", { name: "Learn…" }).click();
