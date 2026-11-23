@@ -16,8 +16,9 @@ builds the same way.
     Its build stages are `docker/Dockerfile`'s: an upstream merge that
     changes them changes `Dockerfile.dmf` the same way.
   - `.github/workflows/dmf-image.yml`, which builds, smoke-tests and
-    publishes the image, and the release train in
-    `.github/workflows/release-please.yml`.
+    publishes the image with its SBOM and gates it on fixable HIGH and
+    CRITICAL CVEs (`.trivyignore.yaml` holds the accepted ones), and the
+    release train in `.github/workflows/release-please.yml`.
   - Upstream's `publish.yml` is removed: it pushes under upstream's image
     name. Do not reintroduce it from an upstream merge.
 - No Helm chart lives here.

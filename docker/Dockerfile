@@ -12,9 +12,9 @@ RUN VCPKG_ROOT=/opt/vcpkg MXL_BUILD_DIR=/tmp/mxl /usr/local/bin/build-mxl.sh /op
 # MediaMTX (MIT) for the built-in preview server (Appendix B.1), the release tarball by checksum.
 FROM ubuntu:24.04 AS mediamtx
 ARG TARGETARCH=amd64
-ARG MEDIAMTX_VERSION=v1.20.1
-ARG MEDIAMTX_SHA256_AMD64=81b143f55a5d23d4a8c028d52869c14ea4a59919900528698fcc97a747fd69c6
-ARG MEDIAMTX_SHA256_ARM64=d1689f0bfefb1864e5ed3dcc8495eb2d7ec0a654f90bf3cd48980cb3bd08718a
+ARG MEDIAMTX_VERSION=v1.21.4
+ARG MEDIAMTX_SHA256_AMD64=be0c05d9c8af8338116977e7f1c3fcb409fbf882075e5ab075cf8baad76a59d2
+ARG MEDIAMTX_SHA256_ARM64=47784081da54c0608ea4dc359f5cfb19880209434769c532b3ed3a67ea99c29d
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN set -eu; \

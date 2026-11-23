@@ -7,14 +7,14 @@
 # it on an upstream merge.
 
 # GO_MXL_TAG is the libmxl the rest of the domain runs, not a free choice.
-ARG GO_MXL_TAG=1.1.0-rc.15
+ARG GO_MXL_TAG=1.1.0-rc.18
 
 # MediaMTX (MIT) for the built-in preview server, the release tarball by checksum.
 FROM ubuntu:24.04 AS mediamtx
 ARG TARGETARCH=amd64
-ARG MEDIAMTX_VERSION=v1.20.1
-ARG MEDIAMTX_SHA256_AMD64=81b143f55a5d23d4a8c028d52869c14ea4a59919900528698fcc97a747fd69c6
-ARG MEDIAMTX_SHA256_ARM64=d1689f0bfefb1864e5ed3dcc8495eb2d7ec0a654f90bf3cd48980cb3bd08718a
+ARG MEDIAMTX_VERSION=v1.21.4
+ARG MEDIAMTX_SHA256_AMD64=be0c05d9c8af8338116977e7f1c3fcb409fbf882075e5ab075cf8baad76a59d2
+ARG MEDIAMTX_SHA256_ARM64=47784081da54c0608ea4dc359f5cfb19880209434769c532b3ed3a67ea99c29d
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 RUN set -eu; \
@@ -29,24 +29,60 @@ COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/index.html web/vite.config.js ./
 COPY web/src ./src
-RUN npm run build
+# The console's npm dependencies end up inside the mixer binary, where no
+# scanner finds them: their CycloneDX fragment, from the lockfile, without
+# the build-only ones.
+RUN npm run build \
+    && node -e ' \
+        const lock = require("./package-lock.json"); \
+        const components = Object.entries(lock.packages) \
+          .filter(([path, p]) => path && !p.dev) \
+          .map(([path, p]) => { \
+            const name = path.replace(/^.*node_modules\//, ""); \
+            const purl = `pkg:npm/${name.replace("@", "%40")}@${p.version}`; \
+            return { type: "library", "bom-ref": purl, name, version: p.version, purl }; \
+          }) \
+          .filter((c, i, all) => all.findIndex((d) => d.purl === c.purl) === i); \
+        if (!components.length) throw new Error("no npm components"); \
+        require("fs").mkdirSync("/sbom"); \
+        require("fs").writeFileSync("/sbom/web.cdx.json", JSON.stringify( \
+          { bomFormat: "CycloneDX", specVersion: "1.6", version: 1, components }));'
 
 FROM ubuntu:24.04 AS build
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        build-essential cmake curl ca-certificates git pkg-config clang libclang-dev libssl-dev \
+        build-essential cmake curl ca-certificates git pkg-config clang libclang-dev libssl-dev jq \
     && rm -rf /var/lib/apt/lists/*
 ENV RUSTUP_HOME=/opt/rustup CARGO_HOME=/opt/cargo PATH=/opt/cargo/bin:$PATH
 RUN curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain 1.97.1
+# cargo-auditable embeds each binary's crate list, so the image SBOM lists
+# the crates the mixer is built from.
+RUN cargo install --locked cargo-auditable --version 0.7.7
 WORKDIR /src
 COPY Cargo.toml Cargo.lock rust-toolchain.toml build.rs ./
 COPY src ./src
 COPY assets ./assets
 COPY --from=web /web/dist/index.html ./web/dist/index.html
-RUN cargo build --release --locked --bins \
+# ONNX Runtime (downloaded by ort-sys) and libopus (built from the copy in
+# opusic-sys) are linked statically, and the crate list names only their
+# wrappers: their CycloneDX fragment, with the versions this build used.
+RUN cargo auditable build --release --locked --bins \
     && install -m 0755 target/release/mxl-audio-mixer target/release/mxl-mixer-tone \
         target/release/mxl-mixer-probe /usr/local/bin/ \
     && install -D -m 0644 "$(ls -d /opt/cargo/registry/src/*/opusic-sys-*/opus | head -1)/COPYING" \
-        /usr/local/share/doc/libopus/COPYING
+        /usr/local/share/doc/libopus/COPYING \
+    && target=$(rustc -vV | sed -n 's/^host: //p') \
+    && ort=$(awk -F'\t' -v t="$target" '$1 == t && $2 == "none" { print $3 }' \
+        /opt/cargo/registry/src/*/ort-sys-*/build/download/dist.tsv) \
+    && ort=${ort#*/ms@} && ort=${ort%%/*} \
+    && opus=$(sed -n 's/^PACKAGE_VERSION="\(.*\)"$/\1/p' /opt/cargo/registry/src/*/opusic-sys-*/opus/package_version) \
+    && [ -n "$ort" ] && [ -n "$opus" ] \
+    && mkdir -p /sbom \
+    && jq -n --arg ort "$ort" --arg opus "$opus" '{bomFormat: "CycloneDX", specVersion: "1.6", version: 1, \
+        components: [ \
+          {type: "library", "bom-ref": "pkg:github/microsoft/onnxruntime@v\($ort)", name: "onnxruntime", \
+           version: $ort, purl: "pkg:github/microsoft/onnxruntime@v\($ort)"}, \
+          {type: "library", "bom-ref": "pkg:github/xiph/opus@v\($opus)", name: "libopus", \
+           version: $opus, purl: "pkg:github/xiph/opus@v\($opus)"}]}' > /sbom/mixer.cdx.json
 
 FROM ghcr.io/qvest-digital/go-mxl-runtime:${GO_MXL_TAG} AS runtime
 ARG GO_MXL_TAG
@@ -58,6 +94,8 @@ COPY --from=build /usr/local/bin/mxl-audio-mixer /usr/local/bin/mxl-mixer-tone \
     /usr/local/bin/mxl-mixer-probe /usr/local/bin/
 COPY --from=mediamtx /opt/mediamtx/mediamtx /usr/local/bin/mediamtx
 COPY --from=mediamtx /opt/mediamtx/LICENSE /usr/share/doc/mediamtx/LICENSE
+COPY --from=web /sbom/ /opt/mxl-audio-mixer/share/sbom/
+COPY --from=build /sbom/ /opt/mxl-audio-mixer/share/sbom/
 # libopus (BSD-3-Clause) and ONNX Runtime (MIT, with its third-party notices)
 # are linked statically into the mixer; the Silero VAD model (MIT) and
 # Com-IS-Assist's control core (MIT) are in it.

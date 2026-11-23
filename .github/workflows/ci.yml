@@ -106,10 +106,10 @@ jobs:
       - name: Web UI build (embedded by cargo build)
         run: cd web && npm ci --no-audit --no-fund && npm run build
       - run: cargo build --release --bins
-      - name: MediaMTX v1.20.1 (the preview server)
+      - name: MediaMTX v1.21.4 (the preview server)
         run: |
-          curl -fsSL --retry 3 -o "$RUNNER_TEMP/mediamtx.tgz" https://github.com/bluenviron/mediamtx/releases/download/v1.20.1/mediamtx_v1.20.1_linux_amd64.tar.gz
-          echo "81b143f55a5d23d4a8c028d52869c14ea4a59919900528698fcc97a747fd69c6  $RUNNER_TEMP/mediamtx.tgz" | sha256sum -c
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/mediamtx.tgz" https://github.com/bluenviron/mediamtx/releases/download/v1.21.4/mediamtx_v1.21.4_linux_amd64.tar.gz
+          echo "be0c05d9c8af8338116977e7f1c3fcb409fbf882075e5ab075cf8baad76a59d2  $RUNNER_TEMP/mediamtx.tgz" | sha256sum -c
           mkdir -p "$RUNNER_TEMP/mediamtx" && tar xzf "$RUNNER_TEMP/mediamtx.tgz" -C "$RUNNER_TEMP/mediamtx" mediamtx
           echo "MEDIAMTX_BIN=$RUNNER_TEMP/mediamtx/mediamtx" >> "$GITHUB_ENV"
       - name: Kernel TAI offset (CLOCK_TAI = UTC + 37 s)
