@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-rc.3](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/compare/dmf-v1.0.0-rc.2...dmf-v1.0.0-rc.3) (2026-11-23)
+
+
+### Continuous Integration
+
+* **image:** read the whole log in the smoke test's capability check ([#9](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/issues/9)) ([7980b92](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/commit/7980b9258ff9befbf76123284686c4a3d211f0fd))
+
 ## [1.0.0-rc.2](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/compare/dmf-v1.0.0-rc.1...dmf-v1.0.0-rc.2) (2026-11-23)
 
 
