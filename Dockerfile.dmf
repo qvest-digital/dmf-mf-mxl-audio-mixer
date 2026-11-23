@@ -7,7 +7,7 @@
 # it on an upstream merge.
 
 # GO_MXL_TAG is the libmxl the rest of the domain runs, not a free choice.
-ARG GO_MXL_TAG=1.1.0-rc.15
+ARG GO_MXL_TAG=1.1.0-rc.18
 
 # MediaMTX (MIT) for the built-in preview server, the release tarball by checksum.
 FROM ubuntu:24.04 AS mediamtx
