@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.0.0-rc.2](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/compare/dmf-v1.0.0-rc.1...dmf-v1.0.0-rc.2) (2026-11-23)
+
+
+### Features
+
+* **console:** offer the colours an X-Touch display shows ([273cd31](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/commit/273cd3181d037dbe3d05a82aea18961153e18f7f))
+* **midi:** show meters, clip and strip colours on Mackie Control ([273cd31](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/commit/273cd3181d037dbe3d05a82aea18961153e18f7f))
+
+
+### Bug Fixes
+
+* **image:** run on go-mxl 1.1.0-rc.18 ([4a4ac7f](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/commit/4a4ac7f74650896a2f014e20a85994dfe5ef0bdf))
+* **image:** ship MediaMTX v1.21.4 ([4a4ac7f](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/commit/4a4ac7f74650896a2f014e20a85994dfe5ef0bdf))
+
+
+### Continuous Integration
+
+* **image:** publish an SBOM and gate on fixable CVEs ([4a4ac7f](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/commit/4a4ac7f74650896a2f014e20a85994dfe5ef0bdf))
+
 ## [1.0.0-rc.1](https://github.com/qvest-digital/dmf-mf-mxl-audio-mixer/compare/dmf-v1.0.0-rc.0...dmf-v1.0.0-rc.1) (2026-11-14)
 
 
