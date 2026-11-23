@@ -1,8 +1,9 @@
 name: DMF image
 
 # Builds Dockerfile.dmf, the mixer on go-mxl-runtime. Pull requests, to any
-# base, build and smoke-test without publishing; main, dmf-v* tags and manual
-# runs publish ghcr.io/qvest-digital/dmf-mf-mxl-audio-mixer.
+# base, build, smoke-test and catalogue it without publishing; main, dmf-v*
+# tags and manual runs publish ghcr.io/qvest-digital/dmf-mf-mxl-audio-mixer
+# with its SBOM attached.
 
 on:
   push:
@@ -84,6 +85,102 @@ jobs:
           docker logs mixer 2>&1 | grep -q 'effective capabilities: sys_nice'
           flow=$(curl -fsS http://localhost:8190/api/v1/virtual-outputs | jq -er '.[0] | select(.running) | .mxl_flow_id')
           docker exec mixer sh -c "test -d /Volumes/mxl/*/$flow.mxl-flow"
+
+      # Pinned by commit: a tag of a third-party action can be moved.
+      - name: Set up Trivy
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.2
+
+      # The image is catalogued once. The vulnerability report, the SPDX copy
+      # and the gate are all derived from this one CycloneDX SBOM, so what a
+      # finding was matched against is the file that is kept.
+      #
+      # What go-mxl and Dockerfile.dmf build from source or download (libmxl,
+      # libfabric, rdma-core, the vcpkg ports; ONNX Runtime, libopus and the
+      # console's npm packages inside the mixer) is recorded by no package
+      # manager, so Trivy cannot see it. The image carries it as CycloneDX
+      # fragments under /opt/*/share/sbom/, and their components are
+      # appended here. The four fragments are required by name, so losing
+      # one fails the step; the glob still picks up any added later. Trivy
+      # reads some fragments from the image itself, so each component is
+      # kept once, by bom-ref.
+      - name: Generate SBOM and vulnerability report
+        run: |
+          set -o pipefail
+          trivy image --quiet --format cyclonedx --output sbom.trivy.json mixer:smoke
+          { cat sbom.trivy.json
+            docker run --rm --entrypoint sh mixer:smoke -c '
+              test -f /opt/libfabric/share/sbom/libfabric-stack.cdx.json &&
+              test -f /opt/libmxl/share/sbom/libmxl.cdx.json &&
+              test -f /opt/mxl-audio-mixer/share/sbom/mixer.cdx.json &&
+              test -f /opt/mxl-audio-mixer/share/sbom/web.cdx.json &&
+              cat /opt/*/share/sbom/*.cdx.json'
+          } | jq -s '.[0].components = ([.[].components[]] | unique_by(.["bom-ref"])) | .[0]' > sbom.cdx.json
+          trivy sbom --quiet --format spdx-json --output sbom.spdx.json sbom.cdx.json
+          trivy sbom --quiet --format json --output report.json sbom.cdx.json
+          # What the gate sees, and what .trivyignore.yaml accepts.
+          # report.json keeps every finding regardless.
+          {
+            echo '### Trivy: fixable HIGH and CRITICAL'
+            echo '```'
+            trivy sbom --quiet --format table --severity HIGH,CRITICAL \
+              --ignore-unfixed --ignorefile .trivyignore.yaml --show-suppressed \
+              sbom.cdx.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload SBOM and report
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+          path: |
+            sbom.cdx.json
+            sbom.spdx.json
+            report.json
+
+      - name: Set up ORAS
+        if: github.event_name != 'pull_request'
+        uses: oras-project/setup-oras@5e2f2482b30b0cb3e14e67f89a80c88c659a7c63 # v2.0.3
+        with:
+          version: 1.3.6
+
+      # Stored beside the image in GHCR as an OCI referrer, so the SBOM of a
+      # published tag outlives the workflow artifact's retention. The digest
+      # pushed may be an index holding the provenance as well; the SBOM
+      # describes the platform image, so it is attached to that manifest.
+      - name: Attach SBOM to the image
+        if: github.event_name != 'pull_request'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          platform=$(docker buildx imagetools inspect "$IMAGE@$DIGEST" --raw |
+            jq -r 'if .manifests then [.manifests[] | select(.platform.os == "linux" and .platform.architecture == "amd64")][0].digest else empty end')
+          oras attach --artifact-type application/vnd.cyclonedx+json \
+            "$IMAGE@${platform:-$DIGEST}" sbom.cdx.json:application/vnd.cyclonedx+json
+
+  # Apart from the image job, so a finding fails the run without holding back
+  # the tags: the fix for a base image CVE usually lies in a rebuild of
+  # go-mxl-runtime, not here. A finding accepted in .trivyignore.yaml does
+  # not fail it.
+  cve-gate:
+    if: github.repository == 'qvest-digital/dmf-mf-mxl-audio-mixer'
+    needs: image
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: sbom-${{ github.sha }}
+      - name: Set up Trivy
+        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
+        with:
+          version: v0.76.2
+      - name: Fail on fixable HIGH and CRITICAL
+        run: |
+          trivy sbom --quiet --severity HIGH,CRITICAL --ignore-unfixed \
+            --ignorefile .trivyignore.yaml --exit-code 1 sbom.cdx.json
 
   push:
     if: github.repository == 'qvest-digital/dmf-mf-mxl-audio-mixer' && github.event_name != 'pull_request'
