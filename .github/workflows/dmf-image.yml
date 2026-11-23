@@ -82,7 +82,7 @@ jobs:
             sleep 1
           done
           curl -fsS http://localhost:8190/readyz
-          docker logs mixer 2>&1 | grep -q 'effective capabilities: sys_nice'
+          docker logs mixer 2>&1 | grep 'effective capabilities: sys_nice' >/dev/null
           flow=$(curl -fsS http://localhost:8190/api/v1/virtual-outputs | jq -er '.[0] | select(.running) | .mxl_flow_id')
           docker exec mixer sh -c "test -d /Volumes/mxl/*/$flow.mxl-flow"
 
