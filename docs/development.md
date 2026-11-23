@@ -131,8 +131,8 @@ builds it) and a MediaMTX executable for the built-in instance. The pinned
 release, as in CI and the image:
 
 ```sh
-curl -fsSL -o /tmp/mediamtx.tgz https://github.com/bluenviron/mediamtx/releases/download/v1.20.1/mediamtx_v1.20.1_linux_amd64.tar.gz
-echo "81b143f55a5d23d4a8c028d52869c14ea4a59919900528698fcc97a747fd69c6  /tmp/mediamtx.tgz" | sha256sum -c
+curl -fsSL -o /tmp/mediamtx.tgz https://github.com/bluenviron/mediamtx/releases/download/v1.21.4/mediamtx_v1.21.4_linux_amd64.tar.gz
+echo "be0c05d9c8af8338116977e7f1c3fcb409fbf882075e5ab075cf8baad76a59d2  /tmp/mediamtx.tgz" | sha256sum -c
 mkdir -p ~/mediamtx && tar xzf /tmp/mediamtx.tgz -C ~/mediamtx mediamtx
 export MEDIAMTX_BIN=~/mediamtx/mediamtx
 ```
