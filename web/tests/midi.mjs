@@ -178,6 +178,18 @@ try {
   // The display colours: each strip's nearest (vox's #4da3ff cyan), white past the end of the surface.
   await hasSent("X-Touch", [0xf0, 0, 0, 0x66, 0x14, 0x72, ...surface.slice(0, 8).map((x) => lcdColour(x.colour)), ...Array(Math.max(0, 8 - surface.length)).fill(7), 0xf7]);
   pass("Mackie Control: motor faders and the names on the display at once, the display colours");
+
+  // The meters, before the sent log is cleared below (the overload clear and the silence go out once):
+  // vox (strip 1) carries the tone, so its meter lights LEDs and is sent again with every
+  // reading, as the device lets it fall; its overload is cleared, as it stays out of the red zone;
+  // a strip past the end of the surface stays dark.
+  const voxMeter = () => sentTo("X-Touch").then((l) => l.filter((d) => d[0] === 0xd0 && d[1] >> 4 === 0 && (d[1] & 0x0f) <= 12));
+  await until("vox's meter lit", async () => (await voxMeter()).some((d) => (d[1] & 0x0f) > 0));
+  const lit = (await voxMeter()).length;
+  await until("vox's meter sent again", async () => (await voxMeter()).length >= lit + 3);
+  await hasSent("X-Touch", [0xd0, 0x0f]);
+  if (surface.length < 8) await hasSent("X-Touch", [0xd0, 0x70]);
+  pass("Mackie Control: meter LEDs as the console draws them, refreshed with every reading; overload cleared outside the red zone");
   const b10 = dbToBend(-10);
   await push("X-Touch", [0xe0, b10 & 0x7f, b10 >> 7]);
   await until("vox at −10 dB from the Mackie fader", async () => (await api("/api/v1/strips/vox")).fader_db === -10);
@@ -210,17 +222,6 @@ try {
   await push("X-Touch", [0x90, 0x68, 0x00]);
   await hasSent("X-Touch", [0xe0, dbToBend(-20) & 0x7f, dbToBend(-20) >> 7]);
   pass("Mackie Control: fader, mute, V-pot pan and push, solo (PFL), select, master; LEDs, ring and motor fader follow, not while touched");
-
-  // The meters: vox (strip 1) carries the tone, so its meter lights LEDs and is sent again with every
-  // reading, as the device lets it fall; its overload is cleared, as it stays out of the red zone;
-  // a strip past the end of the surface stays dark.
-  const voxMeter = () => sentTo("X-Touch").then((l) => l.filter((d) => d[0] === 0xd0 && d[1] >> 4 === 0 && (d[1] & 0x0f) <= 12));
-  await until("vox's meter lit", async () => (await voxMeter()).some((d) => (d[1] & 0x0f) > 0));
-  const lit = (await voxMeter()).length;
-  await until("vox's meter sent again", async () => (await voxMeter()).length >= lit + 3);
-  await hasSent("X-Touch", [0xd0, 0x0f]);
-  if (surface.length < 8) await hasSent("X-Touch", [0xd0, 0x70]);
-  pass("Mackie Control: meter LEDs as the console draws them, refreshed with every reading; overload cleared outside the red zone");
 
   // Generic MIDI learn: CC 7 on vox's fader, note 36 on gtr's mute.
   await page.getByRole("button", { name: "Learn…" }).click();
