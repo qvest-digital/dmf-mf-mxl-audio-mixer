@@ -63,16 +63,16 @@ try {
   await head.screenshot({ path: `${out}/dsp16-C1-header.png` });
   pass(`C1: "${(await info.textContent()).trim()}" under the select, Format beside its dropdown, no key hint`);
 
-  // C2: 16 fixed colours, no colour picker.
+  // C2: the 6 fixed colours of an X-Touch display, no colour picker.
   if (await page.locator('input[type="color"]').count()) throw new Error("a colour picker is still there");
   const swatches = page.getByRole("radiogroup", { name: "Colour" }).getByRole("radio");
-  await until("16 colours and none", async () => (await swatches.count()) === 17);
-  await page.getByRole("radio", { name: "Teal" }).click();
-  await until("Px is teal", async () => (await strip("px")).colour === "#3f8a8a");
+  await until("6 colours and none", async () => (await swatches.count()) === 7);
+  await page.getByRole("radio", { name: "Cyan" }).click();
+  await until("Px is cyan", async () => (await strip("px")).colour === "#2fb0b0");
   await page.getByRole("radiogroup", { name: "Colour" }).screenshot({ path: `${out}/dsp16-C2-colours.png` });
   await page.getByRole("radio", { name: "No colour" }).click();
   await until("Px has no colour", async () => !(await strip("px")).colour);
-  pass("C2: 16 fixed colours (Teal set, then none), no colour picker");
+  pass("C2: the 6 fixed colours (Cyan set, then none), no colour picker");
 
   // C3: the fader as a block: a unit clicked in goes before it; moved after it, it runs post-fader.
   await page.locator('[data-virtual="fader"]').waitFor();

@@ -1,5 +1,5 @@
 <script setup>
-// Pick one of the 16 fixed colours (C2) or none. A colour from an older show that is not one of them
+// Pick one of the fixed colours (C2) or none. A colour from an older show that is not one of them
 // shows as an extra swatch while it is set.
 import { computed } from "vue";
 import { COLOURS } from "../colours.js";

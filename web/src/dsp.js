@@ -179,6 +179,13 @@ export function scaleLevel(scale, values, c, alignment) {
   return s.rel ? db - alignment - (s.offset || 0) : db;
 }
 
+/** Whether `level` on `scale` is in the red zone: the top 1 dB of the digital scales, above the permitted
+ * maximum (alignment + 9 dB) on the PPMs. */
+export function scaleOver(scale, level) {
+  const s = SCALES[scale];
+  return s.rel ? level + (s.offset || 0) - 9 > 0 : level > -1;
+}
+
 /** Height fraction 0…1 of `level` on `scale`. */
 export function scaleFraction(scale, level) {
   const s = SCALES[scale];
