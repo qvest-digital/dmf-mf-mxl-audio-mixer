@@ -41,7 +41,8 @@ RUN npm run build \
             const name = path.replace(/^.*node_modules\//, ""); \
             const purl = `pkg:npm/${name.replace("@", "%40")}@${p.version}`; \
             return { type: "library", "bom-ref": purl, name, version: p.version, purl }; \
-          }); \
+          }) \
+          .filter((c, i, all) => all.findIndex((d) => d.purl === c.purl) === i); \
         if (!components.length) throw new Error("no npm components"); \
         require("fs").mkdirSync("/sbom"); \
         require("fs").writeFileSync("/sbom/web.cdx.json", JSON.stringify( \
