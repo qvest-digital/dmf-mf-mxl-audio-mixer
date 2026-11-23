@@ -137,7 +137,8 @@ The chain of a strip or bus as tiles of one size in a grid, in chain order.
   header opens or closes it; bypass, delete.
 - ◀ ▶ or the `[` and `]` keys step to the previous or next strip or bus; its
   place ("2 of 12"), node count and latency under the select, "Format" beside
-  its dropdown; the colour is one of 16 fixed ones.
+  its dropdown; the colour is one of the 6 an X-Touch display shows (red, yellow,
+  green, cyan, blue, magenta), or none (white on an X-Touch).
 - The fader is a tile of the flow (dashed while it follows the chain): units
   after it run post-fader, a click on a palette unit puts it before the fader.
   The **Flow** group of the palette has the fader, direct outs, inserts and the

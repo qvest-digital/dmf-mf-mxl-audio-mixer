@@ -8,6 +8,7 @@
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";
 import { chromium } from "playwright-core";
+import { COLOURS } from "../src/colours.js";
 import { parseFaderDb } from "../src/console.js";
 import { bendToDb, checkMappings, controlValue, dbToBend, exportMappings, feedback, importMappings, lcd, lcdColour, lcdColours, meter, meterClip, meterLevel, panRing, parseControl, parseMcu, vpotTicks } from "../src/midicodec.js";
 
@@ -43,6 +44,8 @@ assert.deepEqual(meter(3, 0.75), [0xd0, 0x39]);
 assert.deepEqual(meter(3, 0.99, true), [0xd0, 0x3e]);
 assert.deepEqual(meterClip(2, true), [0xd0, 0x2e]);
 assert.deepEqual(meterClip(2, false), [0xd0, 0x2f]);
+// Each fixed colour is its own X-Touch colour: red, yellow, green, cyan, blue, magenta.
+assert.deepEqual(COLOURS.map(([c]) => lcdColour(c)), [1, 3, 2, 6, 4, 5]);
 assert.equal(lcdColour("#4da3ff"), 6);
 assert.equal(lcdColour("#e08a3a"), 3);
 assert.equal(lcdColour("#ff0000"), 1);
